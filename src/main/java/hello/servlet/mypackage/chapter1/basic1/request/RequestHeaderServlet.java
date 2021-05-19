@@ -1,4 +1,4 @@
-package hello.servlet.basic.request;
+package hello.servlet.mypackage.chapter1.basic1.request;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -7,9 +7,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.Enumeration;
 
-@WebServlet(name="requestHeaderServlet", urlPatterns = "/request-header")
+//@WebServlet(name="requestHeaderServlet", urlPatterns = "/request-header")
 public class RequestHeaderServlet extends HttpServlet {
     @Override
     protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -49,7 +48,7 @@ public class RequestHeaderServlet extends HttpServlet {
             System.out.println(headerName + " : " + headerName);
         }
 */
-        // 요즘방식 하지만 요즘 애플리케이션프로퍼티스에 적었던걸 사용함함 logging.level.org.apache.coyote.http11=debug
+        // 요즘방식 하지만 요즘 애플리케이션프로퍼티스에 적었던걸 사용함함
         request.getHeaderNames().asIterator()
                 .forEachRemaining(headerName -> System.out.println(headerName + " : " + headerName));
 
