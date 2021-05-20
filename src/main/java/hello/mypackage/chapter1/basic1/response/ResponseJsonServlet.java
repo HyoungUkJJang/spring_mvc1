@@ -1,10 +1,9 @@
-package hello.servlet.mypackage.chapter1.basic1.response;
+package hello.mypackage.chapter1.basic1.response;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import hello.servlet.mypackage.chapter1.basic1.HelloData;
+import hello.mypackage.chapter1.basic1.HelloData;
 
 import javax.servlet.ServletException;
-import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;

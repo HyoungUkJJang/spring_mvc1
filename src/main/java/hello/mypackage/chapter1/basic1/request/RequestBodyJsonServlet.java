@@ -1,12 +1,11 @@
-package hello.servlet.mypackage.chapter1.basic1.request;
+package hello.mypackage.chapter1.basic1.request;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import hello.servlet.mypackage.chapter1.basic1.HelloData;
+import hello.mypackage.chapter1.basic1.HelloData;
 import org.springframework.util.StreamUtils;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletInputStream;
-import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
