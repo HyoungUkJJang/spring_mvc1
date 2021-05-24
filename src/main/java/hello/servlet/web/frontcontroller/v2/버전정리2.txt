@@ -1,0 +1,99 @@
+버전 1을 보면
+        String viewPath = "/WEB-INF/views/new-form.jsp";
+        RequestDispatcher dispatcher = request.getRequestDispatcher(viewPath);
+        dispatcher.forward(request,response);
+각각의 컨트롤러에서 뷰로 이동하는 부분에 중복이 발생한다.
+이 중복을 없애주기 위해 View를 따로 처리해주는 MyView객체를 만들어준다.
+
+* 뷰를 처리해주는 기능을 따로 구성해 주었기 때문에 코드가 훨씬 간결해진다. *
+
+1. MyView 클래스 생성 - render라는 메소드를 만들어 뷰 로직을 처리할 수 있도록 만들어준다.
+    public class MyView {
+        private String viewPath;
+
+        public MyView(String viewPath) {
+            this.viewPath = viewPath;
+        }
+
+        public void render(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException{
+            RequestDispatcher dispatcher = request.getRequestDispatcher(viewPath);
+            dispatcher.forward(request,response);
+        }
+    }
+
+2.  컨트롤러 인터페이스는 V1과 동일하다.
+    public interface ControllerV2 {
+        MyView process(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException;
+    }
+
+
+3. V2 컨트롤러 인터페이스를 상속받은 컨트롤러를 구성한다.
+    public class MemberFormControllerV2 implements ControllerV2 {
+        @Override
+        public MyView process(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+
+            return new MyView("/WEB-INF/views/new-form.jsp");
+        }
+    }
+    public class MemberSaveControllerV2 implements ControllerV2 {
+        private MemberRepository memberRepository = MemberRepository.getInstance();
+
+        @Override
+        public MyView process(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+            String username = request.getParameter("username");
+            int age = Integer.parseInt(request.getParameter("age"));
+
+            Member member = new Member(username, age);
+            memberRepository.save(member);
+
+            //Model에 데이터를 보관
+            request.setAttribute("member",member);
+
+            return new MyView("/WEB-INF/views/save-result.jsp");
+
+        }
+    }
+    public class MemberListControllerV2 implements ControllerV2 {
+        private MemberRepository memberRepository = MemberRepository.getInstance();
+        @Override
+        public MyView process(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+            List<Member> members = memberRepository.findAll();
+
+            request.setAttribute("members",members);
+
+            return new MyView("/WEB-INF/views/members.jsp");
+        }
+
+    }
+
+4. 문지기 프론트 컨트롤러 작성 !
+    @WebServlet(name="frontControllerServletV2",urlPatterns ="/front-controller/v2/*")
+    public class FrontControllerServletV2 extends HttpServlet {
+
+        private Map<String, ControllerV2> controllerV2Map = new HashMap<>();
+
+        public FrontControllerServletV2() {
+            controllerV2Map.put("/front-controller/v2/members/new-form",new MemberFormControllerV2());
+            controllerV2Map.put("/front-controller/v2/members/save",new MemberSaveControllerV2());
+            controllerV2Map.put("/front-controller/v2/members",new MemberListControllerV2());
+
+        }
+
+        @Override
+        protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+            System.out.println("FrontControllerServletV2.service");
+
+            String requestURI = request.getRequestURI();
+            System.out.println("requestURI = " + requestURI);
+
+            ControllerV2 controller = controllerV2Map.get(requestURI);
+            if(controller == null) {
+                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                return ;
+            }
+
+            MyView view = controller.process(request, response);
+            view.render(request,response);
+        }
+    }
+

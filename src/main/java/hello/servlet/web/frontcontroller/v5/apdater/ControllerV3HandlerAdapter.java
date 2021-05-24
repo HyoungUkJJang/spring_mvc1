@@ -13,11 +13,13 @@ import java.util.Map;
 
 public class ControllerV3HandlerAdapter implements MyHandlerAdapter {
 
+    // 해당 버전을 지원하는지 확인한다.
     @Override
     public boolean support(Object handler) {
         return (handler instanceof ControllerV3);
     }
 
+    // 핸들러를 통해서 호출을해서 값을 얻어야한다.
     @Override
     public ModelView handle(HttpServletRequest request, HttpServletResponse response, Object handler) throws ServletException, IOException {
         ControllerV3 controller = (ControllerV3) handler;

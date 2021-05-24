@@ -1,0 +1,85 @@
+프론트 컨트롤러 - 기존에는 컨트롤러를 각각 만들어서 처리했기 때문에 어느 곳에서든 들어올 수 있었다. 하지만 이를 관리하는 문지기 역할 클래스를 만들어 하나의 공간에서 요청을 하고 응답할 수 잇도록 만들어 준다.
+[V1]
+1.  인터페이스로 ControllerV1 을 만든다.
+public interface ControllerV1
+{
+
+    void process(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException;
+}
+2.  인터페이스를 상속받아 각각의 컨트롤러를 구성하고 처리 로직을 작성한다.
+public class MemberFormControllerV1 implements ControllerV1 {
+    @Override
+    public void process(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        String viewPath = "/WEB-INF/views/new-form.jsp";
+        RequestDispatcher dispatcher = request.getRequestDispatcher(viewPath);
+        dispatcher.forward(request,response);
+    }
+}
+public class MemberListControllerV1 implements ControllerV1 {
+
+    private MemberRepository memberRepository = MemberRepository.getInstance();
+
+    @Override
+    public void process(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        List<Member> members = memberRepository.findAll();
+
+        request.setAttribute("members",members);
+
+        String viewPath = "/WEB-INF/views/members.jsp";
+        RequestDispatcher dispatcher = request.getRequestDispatcher(viewPath);
+        dispatcher.forward(request,response);
+
+    }
+}
+public class MemberSaveControllerV1 implements ControllerV1 {
+
+    private MemberRepository memberRepository = MemberRepository.getInstance();
+
+
+    @Override
+    public void process(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        String username = request.getParameter("username");
+        int age = Integer.parseInt(request.getParameter("age"));
+
+        Member member = new Member(username, age);
+        memberRepository.save(member);
+
+        //Model에 데이터를 보관
+        request.setAttribute("member",member);
+
+        String viewPath = "/WEB-INF/views/save-result.jsp";
+        RequestDispatcher dispatcher = request.getRequestDispatcher(viewPath);
+        dispatcher.forward(request,response);
+    }
+}
+3. 대표 문지기인 프론트 컨트롤러를 만든다 !
+- url패턴으로 v1밑으로 오는 하위 경로는 다 프론트컨트롤러를 통해서 요청받고 응답해주도록 구성한다.
+- 요청된 url 정보를 알아내기 위해 getRequestURI를 통해 받아서 v1과 속한 컨트롤러가 있는지 확인하고 해당하는 컨트롤러를 생성한다.
+- 그 후 해당 컨트롤러에 맞게 메소드를 실행해주고 응답하도록 해준다.
+@WebServlet(name="frontControllerServletV1",urlPatterns ="/front-controller/v1/*")
+public class FrontControllerServletV1 extends HttpServlet {
+
+    private Map<String, ControllerV1> controllerV1Map = new HashMap<>();
+
+    public FrontControllerServletV1() {
+        controllerV1Map.put("/front-controller/v1/members/new-form",new MemberFormControllerV1());
+        controllerV1Map.put("/front-controller/v1/members/save",new MemberSaveControllerV1());
+        controllerV1Map.put("/front-controller/v1/members",new MemberListControllerV1());
+
+    }
+
+    @Override
+    protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        System.out.println("FrontControllerServletV1.service");
+
+        String requestURI = request.getRequestURI();
+
+        ControllerV1 controller = controllerV1Map.get(requestURI);
+        if(controller == null) {
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            return ;
+        }
+
+        controller.process(request, response);
+    }
+}

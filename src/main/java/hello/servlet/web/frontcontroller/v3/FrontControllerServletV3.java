@@ -38,9 +38,11 @@ public class FrontControllerServletV3 extends HttpServlet {
             return ;
         }
 
-        Map<String, String> paramMap = createParamMap(request);
-        ModelView mv = controller.process(paramMap);
+        Map<String, String> paramMap = createParamMap(request); // 리퀘스트 파라미터들을 모아준다.
+        ModelView mv = controller.process(paramMap); // 각 컨트롤러에 맞는 프로세스를 실행하고 모은 paramMap을 전달시켜준다. 그리고 해당하는 모델뷰를 반환
 
+        // 모델 뷰는 논리 이름을 반환해준다 그리고 랜더 기능이 구현되어 있지 않다. 단순히 해당 뷰의 논리이름과 모델만 있음.
+        // 랜더는 마이 뷰를 만들어서 포워드 시켜줘야함.
         String viewName = mv.getViewName();
         MyView view = viewResolver(viewName);
         view.render(mv.getModel(),request,response);

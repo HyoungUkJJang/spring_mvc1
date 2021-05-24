@@ -27,7 +27,7 @@ public class ControllerV4HandlerAdapter implements MyHandlerAdapter {
 
         String viewName = controller.process(paramMap, model);
 
-        // 이제 어댑터 다운 역할이 나온다
+        // 이제 어댑터 다운 역할이 나온다 원래 v4에서는 모델뷰 반환이 아니였기 때문에 생성해서 리턴시켜줘야함
         ModelView mv = new ModelView(viewName);
         mv.setModel(model);
         return mv;

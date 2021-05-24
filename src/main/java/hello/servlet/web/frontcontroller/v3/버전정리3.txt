@@ -1,0 +1,125 @@
+컨트롤러 입장에서 HttpRequestServlet과 HttpServlerResponse가 꼭 필요한것인지 생각해보자.
+
+요청 파라미터 정보에서 자바의 Map으로 대신 넘겨주면 컨트롤러 쪽은 서블릿 기술을 몰라도 동작할 수 있게된다.
+request 객체를 model로 사용하는 대신에 별도의 model 객체를 만들어서 반환해주면 된다.
+
+1. 가장 먼저 뷰의 이름 중복을 제거한다. 컨트롤러에서는 논리 이름만 반환하도록 구현한다.
+
+2. 컨트롤러에서 종속적인 HttpServletRequest 대신에 별도의 ModelView를 만들어준다.
+- 뷰의 이름과 뷰를 렌더링 할때 필요한 model객체를 가지고있다.
+
+    public class ModelView {
+        private String viewName;
+        private Map<String,Object> model = new HashMap<>();
+
+        public ModelView(String viewName) {
+            this.viewName = viewName;
+        }
+
+        public String getViewName() {
+            return viewName;
+        }
+
+        public void setViewName(String viewName) {
+            this.viewName = viewName;
+        }
+
+        public Map<String, Object> getModel() {
+            return model;
+        }
+
+        public void setModel(Map<String, Object> model) {
+            this.model = model;
+        }
+    }
+
+ 3. 컨트롤러 인터페이스 구현 - 이 컨트롤러는 HttpServletRequest, Response를 사용하지 않는다. 따라서 구현이 매우 단순해지고 테스트하기 쉬워진다.
+ - HttpServletRequest가 제공하는 파라미터는 프론트컨트롤러에서 받은다음 프론트컨트롤러가 paramMap에 담아서 직접 호출해주면 뒤에 있는 컨트롤러 에서는
+   서블릿 기술을 몰라도 처리가 가능해 진다는 뜻이다 !
+     public interface ControllerV3 {
+
+         ModelView process(Map<String, String> paramMap);
+
+     }
+
+4. 컨트롤러 인터페이스를 상속받아 각각의 컨트롤러를 작성
+    public class MemberFormControllerV3 implements ControllerV3 {
+        @Override
+        public ModelView process(Map<String, String> paramMap) {
+
+            return new ModelView("new-form");
+        }
+    }
+    public class MemberListControllerV3 implements ControllerV3 {
+        private MemberRepository memberRepository = MemberRepository.getInstance();
+        @Override
+        public ModelView process(Map<String, String> paramMap) {
+            List<Member> members = memberRepository.findAll();
+
+            ModelView mv = new ModelView("members");
+            mv.getModel().put("members", members);
+            return mv;
+        }
+    }
+    public class MemberSaveControllerV3 implements ControllerV3 {
+        private MemberRepository memberRepository = MemberRepository.getInstance();
+        @Override
+        public ModelView process(Map<String, String> paramMap) {
+
+            String username = paramMap.get("username");
+            int age = Integer.parseInt(paramMap.get("age"));
+
+            Member member = new Member(username, age);
+            memberRepository.save(member);
+
+            ModelView mv = new ModelView("save-result");
+            mv.getModel().put("member",member);
+            return mv;
+        }
+    }
+
+ 5. 문지기 프론트 컨트롤러 구성 !
+     @WebServlet(name="frontControllerServletV3",urlPatterns ="/front-controller/v3/*")
+     public class FrontControllerServletV3 extends HttpServlet {
+
+         private Map<String, ControllerV3> controllerV3Map = new HashMap<>();
+
+         public FrontControllerServletV3() {
+             controllerV3Map.put("/front-controller/v3/members/new-form",new MemberFormControllerV3());
+             controllerV3Map.put("/front-controller/v3/members/save",new MemberSaveControllerV3());
+             controllerV3Map.put("/front-controller/v3/members",new MemberListControllerV3());
+         }
+
+         @Override
+         protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+             System.out.println("FrontControllerServletV3.service");
+
+             String requestURI = request.getRequestURI();
+             System.out.println("requestURI = " + requestURI);
+             ControllerV3 controller = controllerV3Map.get(requestURI);
+             if(controller == null) {
+                 response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                 return ;
+             }
+
+             Map<String, String> paramMap = createParamMap(request);
+             ModelView mv = controller.process(paramMap);
+
+             String viewName = mv.getViewName();
+             MyView view = viewResolver(viewName);
+             view.render(mv.getModel(),request,response);
+
+         }
+
+         private MyView viewResolver(String viewName) {
+             return new MyView("/WEB-INF/views/" + viewName + ".jsp");
+         }
+
+         private Map<String, String> createParamMap(HttpServletRequest request) {
+             Map<String,String> paramMap = new HashMap<>();
+             request.getParameterNames()
+                     .asIterator().forEachRemaining(paramName -> paramMap.put(paramName, request.getParameter(paramName)));
+             return paramMap;
+         }
+     }
+

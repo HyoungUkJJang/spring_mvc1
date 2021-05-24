@@ -1,0 +1,49 @@
+만약에 개발자의 특성에 따라 V3버전을 사용하고 싶을 수도 있고 V4 버전을 사용하고 싶을 수도 있다. 이럴때는 어떻게 구현해야할까..
+
+V3 - 모델뷰 객체를 따로 만들어서 컨트롤러 인터페이스에서 리턴형태로 사용한다.
+V4 - 프론트 컨트롤러 자체에서 model객체를 두었기 때문에 리턴타입이 스트링을 사용한다.
+
+이럴때 사용하는 것은 바로 어댑터 패턴!
+
+핸들러 어댑터 - 중간에 어댑터 역할을 하는 어댑터가 추가되었는데, 이름이 핸들러 어댑터이다. 여기서 어댑터 역할을 해주는 덕분에 다양한 종류의 컨트롤러 호출이 가능해짐
+핸들러 - 컨트롤러의 이름을 더 넓은 범위인 핸들러로 칭한다. 그 이유는 어댑터가 있기 때문에 꼭 컨트롤러의 개념 뿐만아니라 어떠한 것이든 해당 종류의 어댑터만 있으면 다 처리할 수 있기 때문.
+
+1. 어댑터를 구현하는 인터페이스 작성
+    public interface MyHandlerAdapter {
+
+        boolean support(Object handler); > handler는 컨트롤러를 말함 / 어댑터가 해당 컨트롤러를 처리할 수 있는지 확인하는 메서드
+
+        ModelView handle(HttpServletRequest request, HttpServletResponse response, Object handler) throws ServletException, IOException;
+        > 실제 컨트롤러를 호출하고 결과로 모델 뷰를 반환한다. 실제 컨트롤러가 모델뷰를 반환하지 못하면 직접 생성해서라도 반환시켜 줘야한다. 이전에는 프론트 컨트롤러가
+        직접 컨트롤러를 호출 했지만 이제는 이 어댑터를 통해서 호출하게 된다.
+
+    }
+
+2. V3를 지원하는 어댑터 작성
+    public class ControllerV3HandlerAdapter implements MyHandlerAdapter {
+
+        // 해당 버전을 지원하는지 확인한다.
+        @Override
+        public boolean support(Object handler) {
+            return (handler instanceof ControllerV3);
+        }
+
+        // 핸들러를 통해서 호출을해서 값을 얻어야한다.
+        @Override
+        public ModelView handle(HttpServletRequest request, HttpServletResponse response, Object handler) throws ServletException, IOException {
+            ControllerV3 controller = (ControllerV3) handler;
+
+            Map<String, String> paramMap = createParamMap(request);
+            ModelView mv = controller.process(paramMap);
+
+            return mv;
+        }
+
+        private Map<String, String> createParamMap(HttpServletRequest request) {
+            Map<String,String> paramMap = new HashMap<>();
+            request.getParameterNames()
+                    .asIterator().forEachRemaining(paramName -> paramMap.put(paramName, request.getParameter(paramName)));
+            return paramMap;
+        }
+
+    }

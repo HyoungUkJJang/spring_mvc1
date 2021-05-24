@@ -1,0 +1,92 @@
+버전 3에서는 인터페이스에 ModelView가 있었는데 이번에는 없다. 스트링을 반환시킴.
+따라서 model 객체는 파라미터로 전달되게 구성했기 때문에 결과로 뷰의 이름만 반환시키면 된다.
+
+1. 컨트롤러 인터페이스 구현
+    public interface ControllerV4 {
+
+        String process(Map<String, String> paramMap, Map<String, Object> model);
+
+    }
+
+2. 컨트롤러 인터페이스를 상속받은 실제 컨트롤러 작성
+    public class MemberFormControllerV4 implements ControllerV4 {
+
+        @Override
+        public String process(Map<String, String> paramMap, Map<String, Object> model) {
+            return "new-form";
+        }
+
+    }
+    public class MemberSaveControllerV4 implements ControllerV4 {
+        private MemberRepository memberRepository = MemberRepository.getInstance();
+
+        @Override
+        public String process(Map<String, String> paramMap, Map<String, Object> model) {
+            String username = paramMap.get("username");
+            int age = Integer.parseInt(paramMap.get("age"));
+
+            Member member = new Member(username, age);
+            memberRepository.save(member);
+
+            model.put("member",member);
+            return "save-result";
+
+        }
+    }
+    public class MemberListControllerV4 implements ControllerV4 {
+        private MemberRepository memberRepository = MemberRepository.getInstance();
+
+        @Override
+        public String process(Map<String, String> paramMap, Map<String, Object> model) {
+            List<Member> members = memberRepository.findAll();
+
+            model.put("members",members);
+            return "members";
+        }
+    }
+
+3. 프론트 컨트롤러 문지기 작성 - Map<String, Object> model = new HashMap<>(); 을 새로 추가해줘서 컨트롤러에 모델 객체에 값을 담으면 여기에 담아지게 된다.
+    @WebServlet(name="fromControllerServletV4",urlPatterns = "/front-controller/v4/*")
+    public class FrontControllerServletV4 extends HttpServlet {
+
+        private Map<String, ControllerV4> controllerV4Map = new HashMap<>();
+
+        public FrontControllerServletV4() {
+            controllerV4Map.put("/front-controller/v4/members/new-form",new MemberFormControllerV4());
+            controllerV4Map.put("/front-controller/v4/members/save",new MemberSaveControllerV4());
+            controllerV4Map.put("/front-controller/v4/members",new MemberListControllerV4());
+        }
+
+        @Override
+        protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+            System.out.println("FrontControllerServletV4.service");
+
+            String requestURI = request.getRequestURI();
+            System.out.println("requestURI = " + requestURI);
+            ControllerV4 controller = controllerV4Map.get(requestURI);
+            if(controller == null) {
+                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                return ;
+            }
+
+            Map<String, String> paramMap = createParamMap(request);
+            Map<String, Object> model = new HashMap<>(); // 추가됨
+            String viewName = controller.process(paramMap, model);
+
+            MyView view = viewResolver(viewName);
+
+            view.render(model,request,response);
+
+        }
+
+        private MyView viewResolver(String viewName) {
+            return new MyView("/WEB-INF/views/" + viewName + ".jsp");
+        }
+
+        private Map<String, String> createParamMap(HttpServletRequest request) {
+            Map<String,String> paramMap = new HashMap<>();
+            request.getParameterNames()
+                    .asIterator().forEachRemaining(paramName -> paramMap.put(paramName, request.getParameter(paramName)));
+            return paramMap;
+        }
+    }

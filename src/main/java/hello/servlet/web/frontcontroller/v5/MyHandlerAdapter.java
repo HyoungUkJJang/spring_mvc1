@@ -13,4 +13,5 @@ public interface MyHandlerAdapter {
 
     ModelView handle(HttpServletRequest request, HttpServletResponse response, Object handler) throws ServletException, IOException;
 
+
 }

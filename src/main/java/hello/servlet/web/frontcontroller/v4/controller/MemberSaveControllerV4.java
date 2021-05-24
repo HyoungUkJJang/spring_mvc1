@@ -18,6 +18,7 @@ public class MemberSaveControllerV4 implements ControllerV4 {
         Member member = new Member(username, age);
         memberRepository.save(member);
 
+        // 모델이 파라미터로 전달되기 때문에 모델을 직접 생성하지 않고 그냥 사용하면 된다.
         model.put("member",member);
         return "save-result";
 
